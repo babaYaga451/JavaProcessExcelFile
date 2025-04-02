@@ -36,3 +36,11 @@ Update the `application.properties` file:
 input.file=${INPUT_FILE}
 ```
 
+## Running the Application
+
+To run the application, use:
+
+```sh
+java -jar target/excel-processor.jar --INPUT_FILE=/path/to/excel.xlsx
+```
+
