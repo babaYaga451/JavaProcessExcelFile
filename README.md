@@ -41,6 +41,6 @@ input.file=${INPUT_FILE}
 To run the application, use:
 
 ```sh
-java -jar target/excel-processor.jar --INPUT_FILE=/path/to/excel.xlsx
+java -jar -Dinput.file=src/main/resources/shippers_large.xlsx target/ProcessExcelFile-0.0.1-SNAPSHOT.jar
 ```
 
