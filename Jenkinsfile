@@ -41,6 +41,10 @@ pipeline {
     }
 
     post {
+        always {
+            sh 'rm -rf ~/.m2/repository'
+            echo '🗑️ Maven cache deleted after build!'
+        }
         success {
             echo '✅ Build and Execution Successful!'
         }
