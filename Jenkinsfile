@@ -2,8 +2,8 @@ pipeline {
     agent any  // Runs on Jenkins agent (or Jenkins itself if no agents)
 
     tools {
-        jdk 'JDK-17'     // Use the JDK version installed in Jenkins UI
-        maven 'Maven-3.8.6'  // Use installed Maven
+        jdk 'jdk17'     // Use the JDK version installed in Jenkins UI
+        maven 'maven-3.8.6'  // Use installed Maven
     }
 
     parameters {
