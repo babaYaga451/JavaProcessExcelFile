@@ -39,4 +39,13 @@ pipeline {
             }
         }
     }
+
+    post {
+        success {
+            echo '✅ Build and Execution Successful!'
+        }
+        failure {
+            echo '❌ Build Failed!'
+        }
+    }
 }
