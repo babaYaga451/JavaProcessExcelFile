@@ -7,7 +7,7 @@ pipeline {
     }
 
     parameters {
-        string(name: 'INPUT_FILE', defaultValue: 'src/main/resources/shippers_large.xlsx', description: 'Path to input file inside the project')
+        string(name: 'INPUT_FILE', defaultValue: 'src/main/resources/shippers_large.csv', description: 'Path to input file inside the project')
     }
 
     environment {
@@ -17,7 +17,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/babaYaga451/JavaProcessExcelFile.git'
+                git branch: 'optimized-virtual-thread', url: 'https://github.com/babaYaga451/JavaProcessExcelFile.git'
             }
         }
 
