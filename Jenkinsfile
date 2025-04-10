@@ -12,9 +12,16 @@ pipeline {
 
     environment {
         JAR_NAME = "target/ProcessExcelFile-0.0.1-SNAPSHOT.jar"
+        JAVA_HOME = '/opt/jdk-21'
+        PATH = "${env.JAVA_HOME}/bin:${env.PATH}"
     }
 
     stages {
+        stage('Test java version') {
+                steps {
+                    sh 'java -version'
+                }
+        }
         stage('Clone Repository') {
             steps {
                 git branch: 'optimized-virtual-thread', url: 'https://github.com/babaYaga451/JavaProcessExcelFile.git'
