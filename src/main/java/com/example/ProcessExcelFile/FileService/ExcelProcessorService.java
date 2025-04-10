@@ -1,5 +1,7 @@
 package com.example.ProcessExcelFile.FileService;
 
+import static com.example.ProcessExcelFile.ProcessExcelFileApplication.shipperMap;
+
 import com.example.ProcessExcelFile.Data.Data;
 import com.poiji.bind.Poiji;
 
@@ -26,28 +28,6 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class ExcelProcessorService {
-    public static final Map<Long, String> shipperMap =
-            Map.of(
-                    10000L,
-                    "Shipper 1",
-                    10001L,
-                    "Shipper 2",
-                    10002L,
-                    "Shipper 3",
-                    10003L,
-                    "Shipper 4",
-                    10004L,
-                    "Shipper 5",
-                    10005L,
-                    "Shipper 6",
-                    10006L,
-                    "Shipper 7",
-                    10007L,
-                    "Shipper 8",
-                    10008L,
-                    "Shipper 9",
-                    10009L,
-                    "Shipper 10");
 
     @Value("${input.file}")
     private String inputFileName;
@@ -73,7 +53,7 @@ public class ExcelProcessorService {
     }
 
     private void saveToCSV(Long origin, List<Data> recordsByOrigin) {
-        log.info("Processing origin: " + origin);
+        // log.info("Processing origin: " + origin);
         String shipper = shipperMap.get(origin);
 
         String filePath = outputDir + "/" + shipper + ".csv";
