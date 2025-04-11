@@ -1,57 +1,45 @@
 package com.example.ProcessExcelFile.FileService;
 
 import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
-class WriteRegistry {
-    private final Map<Long, BufferedWriter> writerMap = new ConcurrentHashMap<>();
+public class WriteRegistry {
     private final String outputDir;
+    private final Map<Long, BufferedWriter> writers = new HashMap<>();
 
     public WriteRegistry(String outputDir) {
         this.outputDir = outputDir;
     }
 
-    public void writeLine(Long origin, String line) {
-        BufferedWriter writer =
-                writerMap.computeIfAbsent(
-                        origin,
-                        o -> {
-                            try {
-                                String filePath = outputDir + "/" + "shipper_" + o + ".csv";
-                                System.out.println("Writing to file" + filePath);
-                                return Files.newBufferedWriter(
-                                        Paths.get(filePath),
-                                        StandardOpenOption.CREATE,
-                                        StandardOpenOption.APPEND);
-                            } catch (IOException e) {
-                                throw new UncheckedIOException(e);
-                            }
-                        });
+    public synchronized void writeLines(Long origin, List<String> lines) {
+        try {
+            BufferedWriter writer = writers.computeIfAbsent(origin, key -> {
+                try {
+                    String fileName = Paths.get(outputDir, origin + ".txt").toString();
+                    return new BufferedWriter(new FileWriter(fileName, true));
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to create writer", e);
+                }
+            });
 
-        synchronized (writer) {
-            try {
-                writer.write(line);
-                writer.newLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            writer.write(String.join("\n", lines));
+            writer.write("\n");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     public void closeAll() {
-        for (BufferedWriter writer : writerMap.values()) {
+        for (BufferedWriter writer : writers.values()) {
             try {
                 writer.flush();
                 writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            } catch (IOException ignored) {}
         }
     }
 }
