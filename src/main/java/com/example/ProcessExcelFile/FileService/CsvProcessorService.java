@@ -3,14 +3,13 @@ package com.example.ProcessExcelFile.FileService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,126 +27,72 @@ public class CsvProcessorService {
     @Value("${output.dir}")
     private String outputDir;
 
-    private static final int CHUNK_SIZE = 64 * 1024 * 1024;
     private static final int BATCH_SIZE = 10_000;
 
-    public void processCsvFile() throws IOException, ExecutionException, InterruptedException {
+    public void processCsvFile() throws IOException, InterruptedException, ExecutionException {
         File input = new File(inputFileName);
         if (!input.exists()) throw new IllegalArgumentException("Input file doesn't exist");
 
         Files.createDirectories(Paths.get(outputDir));
-        FileChannel channel = new RandomAccessFile(input, "r").getChannel();
-        long fileSize = channel.size();
 
-        var registry = new WriteRegistry(outputDir);
+        WriteRegistry registry = new WriteRegistry(outputDir);
         ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
         List<Future<?>> futures = new ArrayList<>();
 
-        long position = 0;
-        boolean isFirstChunk = true;
+        List<String> batch = new ArrayList<>(BATCH_SIZE);
 
-        while (position < fileSize) {
-            long chunkStart = position;
-            long sizeToRead = Math.min(CHUNK_SIZE, fileSize - chunkStart);
-            long nextPosition = chunkStart + sizeToRead;
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(inputFileName))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank() || line.toLowerCase().contains("origin")) continue;
 
-            // Extend to next newline
-            if (nextPosition < fileSize) {
-                channel.position(nextPosition);
-                byte[] tail = new byte[1024];
-                int bytesRead = channel.read(java.nio.ByteBuffer.wrap(tail));
-                for (int i = 0; i < bytesRead; i++) {
-                    if (tail[i] == '\n') {
-                        sizeToRead += i + 1;
-                        break;
-                    }
+                batch.add(line);
+                if (batch.size() == BATCH_SIZE) {
+                    List<String> currentBatch = new ArrayList<>(batch);
+                    futures.add(executor.submit(() -> processBatch(currentBatch, registry)));
+                    batch.clear();
                 }
             }
 
-            final long finalChunkStart = chunkStart;
-            final int finalSizeToRead = (int) sizeToRead;
-            final boolean isFirst = isFirstChunk;
-
-            futures.add(
-                    executor.submit(
-                            () -> {
-                                try {
-                                    processChunk(
-                                            channel,
-                                            finalChunkStart,
-                                            finalSizeToRead,
-                                            isFirst,
-                                            registry);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }));
-
-            position += sizeToRead;
-            isFirstChunk = false;
+            // Final batch
+            if (!batch.isEmpty()) {
+                List<String> currentBatch = new ArrayList<>(batch);
+                futures.add(executor.submit(() -> processBatch(currentBatch, registry)));
+            }
         }
 
-        for (Future<?> f : futures) f.get();
-        registry.closeAll();
+        for (Future<?> future : futures) future.get();
         executor.shutdown();
+        registry.closeAll();
+
         System.out.println("✅ Processing complete.");
     }
 
-    private void processChunk(
-            FileChannel channel,
-            long chunkStart,
-            int sizeToRead,
-            boolean isFirstChunk,
-            WriteRegistry registry)
-            throws IOException {
-        MappedByteBuffer buffer =
-                channel.map(FileChannel.MapMode.READ_ONLY, chunkStart, sizeToRead);
-        StringBuilder lineBuilder = new StringBuilder();
-        boolean skipUntilNewline = !isFirstChunk;
+    private void processBatch(List<String> lines, WriteRegistry registry) {
+        Map<Long, List<String>> grouped = new HashMap<>();
 
-        Map<Long, List<String>> originBatchMap = new HashMap<>();
-
-        while (buffer.hasRemaining()) {
-            char c = (char) buffer.get();
-
-            if (skipUntilNewline) {
-                if (c == '\n') {
-                    skipUntilNewline = false;
+        for (String line : lines) {
+            String[] parts = line.split(",");
+            if (parts.length >= 0) {
+                try {
+                    long origin = Long.parseLong(parts[0].trim().replaceAll("^\"|\"$", ""));
+                    String pipeLine =
+                            String.join("|", Arrays.stream(parts).map(String::trim).toList());
+                    grouped.computeIfAbsent(origin, k -> new ArrayList<>()).add(pipeLine);
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid origin: " + parts[0]);
                 }
-                continue;
             }
+        }
 
-            lineBuilder.append(c);
-            if (c == '\n') {
-                String line = lineBuilder.toString().trim();
-                lineBuilder.setLength(0);
-
-                if (!line.isEmpty() && !line.toLowerCase().contains("origin")) {
-                    String[] parts = line.split(",");
-                    if (parts.length >= 6) {
-                        try {
-                            long origin = Long.parseLong(parts[0].replaceAll("^\"|\"$", "").trim());
-                            String pipeLine = String.join("|", parts).trim();
-                            originBatchMap
-                                    .computeIfAbsent(origin, k -> new ArrayList<>())
-                                    .add(pipeLine);
-
-                            if (originBatchMap.get(origin).size() >= BATCH_SIZE) {
-                                List<String> batch = originBatchMap.remove(origin);
-                                registry.writeLines(origin, batch);
-                            }
-                        } catch (NumberFormatException ignored) {
-                            System.out.println("Invalid origin: " + parts[0]);
-                        }
+        grouped.forEach(
+                (origin, values) -> {
+                    try {
+                        registry.writeLines(origin, values);
+                    } catch (IOException e) {
+                        System.err.println("Failed to write batch for origin " + origin);
+                        e.printStackTrace();
                     }
-                }
-            }
-        }
-
-        // flush remaining lines
-        for (Map.Entry<Long, List<String>> entry : originBatchMap.entrySet()) {
-            registry.writeLines(entry.getKey(), entry.getValue());
-        }
+                });
     }
 }
-
