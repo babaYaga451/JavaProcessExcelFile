@@ -10,8 +10,14 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 @Service
 public class CsvProcessorService {
@@ -62,13 +68,20 @@ public class CsvProcessorService {
             final int finalSizeToRead = (int) sizeToRead;
             final boolean isFirst = isFirstChunk;
 
-            futures.add(executor.submit(() -> {
-                try {
-                    processChunk(channel, finalChunkStart, finalSizeToRead, isFirst, registry);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }));
+            futures.add(
+                    executor.submit(
+                            () -> {
+                                try {
+                                    processChunk(
+                                            channel,
+                                            finalChunkStart,
+                                            finalSizeToRead,
+                                            isFirst,
+                                            registry);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }));
 
             position += sizeToRead;
             isFirstChunk = false;
@@ -80,8 +93,15 @@ public class CsvProcessorService {
         System.out.println("✅ Processing complete.");
     }
 
-    private void processChunk(FileChannel channel, long chunkStart, int sizeToRead, boolean isFirstChunk, WriteRegistry registry) throws IOException {
-        MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_ONLY, chunkStart, sizeToRead);
+    private void processChunk(
+            FileChannel channel,
+            long chunkStart,
+            int sizeToRead,
+            boolean isFirstChunk,
+            WriteRegistry registry)
+            throws IOException {
+        MappedByteBuffer buffer =
+                channel.map(FileChannel.MapMode.READ_ONLY, chunkStart, sizeToRead);
         StringBuilder lineBuilder = new StringBuilder();
         boolean skipUntilNewline = !isFirstChunk;
 
@@ -109,8 +129,8 @@ public class CsvProcessorService {
                             long origin = Long.parseLong(parts[0].replaceAll("^\"|\"$", "").trim());
                             String pipeLine = String.join("|", parts).trim();
                             originBatchMap
-                                .computeIfAbsent(origin, k -> new ArrayList<>())
-                                .add(pipeLine);
+                                    .computeIfAbsent(origin, k -> new ArrayList<>())
+                                    .add(pipeLine);
 
                             if (originBatchMap.get(origin).size() >= BATCH_SIZE) {
                                 List<String> batch = originBatchMap.remove(origin);
@@ -130,3 +150,4 @@ public class CsvProcessorService {
         }
     }
 }
+

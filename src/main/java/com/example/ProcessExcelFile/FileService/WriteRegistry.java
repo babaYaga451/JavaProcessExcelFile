@@ -18,14 +18,18 @@ public class WriteRegistry {
 
     public synchronized void writeLines(Long origin, List<String> lines) {
         try {
-            BufferedWriter writer = writers.computeIfAbsent(origin, key -> {
-                try {
-                    String fileName = Paths.get(outputDir, origin + ".txt").toString();
-                    return new BufferedWriter(new FileWriter(fileName, true));
-                } catch (IOException e) {
-                    throw new RuntimeException("Failed to create writer", e);
-                }
-            });
+            BufferedWriter writer =
+                    writers.computeIfAbsent(
+                            origin,
+                            key -> {
+                                try {
+                                    String fileName =
+                                            Paths.get(outputDir, origin + ".txt").toString();
+                                    return new BufferedWriter(new FileWriter(fileName, true));
+                                } catch (IOException e) {
+                                    throw new RuntimeException("Failed to create writer", e);
+                                }
+                            });
 
             writer.write(String.join("\n", lines));
             writer.write("\n");
@@ -39,7 +43,9 @@ public class WriteRegistry {
             try {
                 writer.flush();
                 writer.close();
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+            }
         }
     }
 }
+
