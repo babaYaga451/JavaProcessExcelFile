@@ -1,51 +1,54 @@
 package com.example.ProcessExcelFile.FileService;
 
 import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class WriteRegistry {
+
     private final String outputDir;
-    private final Map<Long, BufferedWriter> writers = new HashMap<>();
+    private final Map<Long, BufferedWriter> writerMap = new ConcurrentHashMap<>();
 
     public WriteRegistry(String outputDir) {
         this.outputDir = outputDir;
     }
 
-    public synchronized void writeLines(Long origin, List<String> lines) {
-        try {
-            BufferedWriter writer =
-                    writers.computeIfAbsent(
-                            origin,
-                            key -> {
-                                try {
-                                    String fileName =
-                                            Paths.get(outputDir, origin + ".txt").toString();
-                                    return new BufferedWriter(new FileWriter(fileName, true));
-                                } catch (IOException e) {
-                                    throw new RuntimeException("Failed to create writer", e);
-                                }
-                            });
+    public synchronized void writeLines(Long origin, List<String> lines) throws IOException {
+        BufferedWriter writer =
+                writerMap.computeIfAbsent(
+                        origin,
+                        key -> {
+                            try {
+                                Path outputPath = Paths.get(outputDir, origin + ".txt");
+                                return Files.newBufferedWriter(
+                                        outputPath,
+                                        StandardOpenOption.CREATE,
+                                        StandardOpenOption.APPEND);
+                            } catch (IOException e) {
+                                throw new UncheckedIOException(e);
+                            }
+                        });
 
-            writer.write(String.join("\n", lines));
-            writer.write("\n");
-        } catch (IOException e) {
-            e.printStackTrace();
+        for (String line : lines) {
+            writer.write(line);
+            writer.newLine();
         }
     }
 
     public void closeAll() {
-        for (BufferedWriter writer : writers.values()) {
+        for (BufferedWriter writer : writerMap.values()) {
             try {
-                writer.flush();
                 writer.close();
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                System.err.println("Error closing writer: " + e.getMessage());
             }
         }
     }
 }
-
