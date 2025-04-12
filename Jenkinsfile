@@ -1,13 +1,8 @@
 pipeline {
     agent any  // Runs on Jenkins agent (or Jenkins itself if no agents)
 
-    tools {
-        jdk 'jdk'     // Use the JDK version installed in Jenkins UI
-        maven 'maven'  // Use installed Maven
-    }
-
     parameters {
-        string(name: 'INPUT_FILE', defaultValue: 'src/main/resources/shippers_large.xlsx', description: 'Path to input file inside the project')
+        string(name: 'INPUT_FILE', defaultValue: '/app/input.csv', description: 'Path to input file inside the project')
     }
 
     environment {
