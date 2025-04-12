@@ -36,10 +36,8 @@ public class WriteRegistry {
                             }
                         });
 
-        for (String line : lines) {
-            writer.write(line);
-            writer.newLine();
-        }
+        String joined = String.join("\n", lines);
+        writer.write(joined + "\n");
     }
 
     public void closeAll() {
