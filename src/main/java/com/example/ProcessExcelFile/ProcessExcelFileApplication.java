@@ -9,7 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class ProcessExcelFileApplication implements CommandLineRunner {
-    // @Autowired ExcelProcessorService excelProcessorService;
     @Autowired CsvProcessorService csvProcessorService;
 
     public static void main(String[] args) {
@@ -18,7 +17,6 @@ public class ProcessExcelFileApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // excelProcessorService.ProcessFile();
         var start = System.currentTimeMillis();
         csvProcessorService.processCsvFile();
         var end = System.currentTimeMillis();
