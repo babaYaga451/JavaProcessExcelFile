@@ -1,32 +1,12 @@
 #!/bin/bash
 
-input_file="./src/main/resources/MacyOutput.csv"
-output_dir="./target/output"
+# Get list of present shippers from filenames (without extension)
+ls ./target/output/automation | sed 's/\..*//' | sort | uniq > present_shippers.txt
 
-echo "🔍 Checking for duplicates in output files..."
-for file in "$output_dir"/*.txt; do
-  duplicates=$(sort "$file" | uniq -d)
-
-  if [[ -n "$duplicates" ]]; then
-    echo "🚨 Duplicates found in $file:"
-    echo "$duplicates"
-  fi
-done
-
-echo ""
-echo "📊 Verifying line counts..."
-
-input_count=$(wc -l < "$input_file")
-output_count=$(cat "$output_dir"/*.txt | wc -l)
-
-expected_output_count=$((input_count - 1)) # subtracting 1 for header
-
-echo "Input line count        : $input_count"
-echo "Expected output count   : $expected_output_count"
-echo "Actual output line count: $output_count"
-
-if [[ "$output_count" -eq "$expected_output_count" ]]; then
-  echo "✅ All lines accounted for."
-else
-  echo "❌ Line count mismatch. Some lines may be missing!"
-fi
+# Print lines from data.csv where the shipper is not present in the output
+echo "🚨 Missing shipper lines in data.csv:"
+while IFS=',' read -r col1 col2; do
+    if ! grep -Fxq "$col2" present_shippers.txt; then
+        echo "$col1,$col2"
+    fi
+done < src/main/resources/origin_shipper.csv

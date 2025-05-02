@@ -91,7 +91,7 @@ public class CsvProcessorService {
                 try {
                     long origin = Long.parseLong(parts[0].trim().replaceAll("^\"|\"$", ""));
                     List<String> tntList = List.of(parts[0], parts[1], parts[3]);
-                    String pipeLine = String.join("|", tntList.stream().map(String::trim).toList());
+                    String pipeLine = String.join("|", parts);
                     String csv = String.join(",", tntList.stream().map(String::trim).toList());
                     groupedPiped.computeIfAbsent(origin, k -> new ArrayList<>()).add(pipeLine);
                     groupedCsv.computeIfAbsent(origin, k -> new ArrayList<>()).add(csv);
