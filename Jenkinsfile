@@ -7,7 +7,7 @@ pipeline {
     }
 
     parameters {
-        string(name: 'INPUT_FILE', defaultValue: '/app/input.csv', description: 'Path to input file inside the project')
+        string(name: 'INPUT_FILE', defaultValue: '/data/input.csv', description: 'Path to input file inside the project')
     }
 
     environment {
